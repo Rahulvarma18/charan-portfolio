@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
     animate,
     motion,
@@ -63,7 +64,7 @@ export function HaloReel({
     const hoverRef = React.useRef(false);
 
     const [size, setSize] = React.useState({ w: 0, h: 0 });
-    const [fullscreenVideo, setFullscreenVideo] = React.useState(null);
+    const [previewItem, setPreviewItem] = React.useState(null);
     React.useEffect(() => {
         const node = stageRef.current;
         if (!node) return;
@@ -122,7 +123,7 @@ export function HaloReel({
 
         const tick = () => {
             timer = window.setTimeout(() => {
-                if (draggingRef.current || (pauseOnHover && hoverRef.current) || fullscreenVideo) {
+                if (draggingRef.current || (pauseOnHover && hoverRef.current) || previewItem) {
                     tick();
                     return;
                 }
@@ -144,16 +145,17 @@ export function HaloReel({
         count,
         holdDuration,
         pauseOnHover,
+        previewItem,
         reduceMotion,
         rotation,
         step,
         stepDuration,
-        fullscreenVideo,
     ]);
 
     /* ── drag ──────────────────────────────────────────────────── */
 
     const dragRef = React.useRef({ left: 0, top: 0, angle: 0 });
+    const hasDraggedRef = React.useRef(false);
 
     const pointerAngle = (e) => {
         const { left, top } = dragRef.current;
@@ -171,6 +173,7 @@ export function HaloReel({
         dragRef.current = { left: rect.left, top: rect.top, angle: 0 };
         dragRef.current.angle = pointerAngle(e);
         draggingRef.current = true;
+        hasDraggedRef.current = false;
         e.currentTarget.setPointerCapture(e.pointerId);
     };
 
@@ -181,6 +184,9 @@ export function HaloReel({
         // delta and not a full turn in the wrong direction.
         const delta =
             ((angle - dragRef.current.angle + Math.PI * 3) % TAU) - Math.PI;
+        if (Math.abs(delta) > 0.005) {
+            hasDraggedRef.current = true;
+        }
         dragRef.current.angle = angle;
         rotation.set(rotation.get() + delta * dragSensitivity);
     };
@@ -219,6 +225,15 @@ export function HaloReel({
         spinBy(direction);
     };
 
+    React.useEffect(() => {
+        if (!previewItem) return;
+        const onKey = (e) => {
+            if (e.key === "Escape") setPreviewItem(null);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [previewItem]);
+
     if (!count) return null;
 
     return (
@@ -235,8 +250,7 @@ export function HaloReel({
             onPointerCancel={endDrag}
             className={cn(
                 "relative h-[100dvh] w-full touch-pan-y select-none overflow-hidden outline-none",
-                draggable && !fullscreenVideo && "cursor-grab active:cursor-grabbing",
-                fullscreenVideo && "pointer-events-none",
+                draggable && "cursor-grab active:cursor-grabbing",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 className,
             )}
@@ -277,45 +291,95 @@ export function HaloReel({
                     onHoverChange={(hovered) => {
                         hoverRef.current = hovered;
                     }}
-                    fullscreenVideo={fullscreenVideo}
-                    setFullscreenVideo={setFullscreenVideo}
+                    onPreview={() => {
+                        if (!hasDraggedRef.current) {
+                            setPreviewItem(items[i % count]);
+                        }
+                    }}
                 />
             ))}
 
-            {/* Fullscreen Video Overlay */}
-            {fullscreenVideo && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md"
-                    onMouseLeave={() => setFullscreenVideo(null)}
-                    style={{ pointerEvents: 'auto' }}
-                >
-                    <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        className="relative w-[95vw] h-[95vh] max-w-6xl rounded-xl overflow-hidden"
-                    >
-                        <video
-                            src={fullscreenVideo}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            className="w-full h-full object-contain"
-                        />
-                        <button
-                            onClick={() => setFullscreenVideo(null)}
-                            className="absolute top-6 right-6 text-white text-3xl hover:text-gray-300 transition-colors duration-200 bg-black/40 hover:bg-black/60 rounded-full w-12 h-12 flex items-center justify-center font-light"
-                        >
-                            ✕
-                        </button>
-                    </motion.div>
-                </motion.div>
-            )}
+            {previewItem ? (
+                <VideoPreviewModal
+                    item={previewItem}
+                    onClose={() => setPreviewItem(null)}
+                />
+            ) : null}
         </div>
+    );
+}
+
+/* ── fullscreen preview ─────────────────────────────────────────── */
+
+function VideoPreviewModal({ item, onClose }) {
+    React.useEffect(() => {
+        const onKey = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onKey);
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            window.removeEventListener("keydown", onKey);
+            document.body.style.overflow = originalOverflow;
+        };
+    }, [onClose]);
+
+    if (typeof document === "undefined") return null;
+
+    return createPortal(
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={item.alt ?? item.title ?? "Video preview"}
+            onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-8 animate-in fade-in duration-200"
+        >
+            <div
+                className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 bg-zinc-900/60">
+                    <div className="flex items-center gap-3">
+                        <span className="h-2.5 w-2.5 rounded-full bg-orange-500 animate-pulse" />
+                        <div>
+                            <h3 className="text-base font-semibold text-white tracking-tight">
+                                {item.title ?? "Selected Work"}
+                            </h3>
+                            <p className="text-xs text-white/60">
+                                {item.category ? `${item.category} • ` : ""}
+                                {item.tool ?? "Reel Preview"}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close preview"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 active:scale-95"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Modal Video Player */}
+                <div className="relative flex items-center justify-center bg-black aspect-video max-h-[70vh]">
+                    <video
+                        key={item.src}
+                        src={item.src}
+                        controls
+                        autoPlay
+                        playsInline
+                        className="h-full w-full object-contain"
+                    />
+                </div>
+            </div>
+        </div>,
+        document.body
     );
 }
 
@@ -334,9 +398,11 @@ function WheelCard({
     height,
     decorative,
     onHoverChange,
-    fullscreenVideo,
-    setFullscreenVideo,
+    onPreview,
 }) {
+    const [isHovered, setIsHovered] = React.useState(false);
+    const isVideo = Boolean(item.src) && /\.(mp4|webm|mov)(\?.*)?$/i.test(item.src);
+
     const cos = useTransform(rotation, (r) => Math.cos(index * step + r));
     const sin = useTransform(rotation, (r) => Math.sin(index * step + r));
 
@@ -346,28 +412,30 @@ function WheelCard({
         cos,
         (c) => minScale + (1 - minScale) * ((c + 1) / 2),
     );
-    const zIndex = useTransform(scale, (s) => Math.round(s * 1000));
+
+    const baseZIndex = useTransform(scale, (s) => Math.round(s * 1000));
 
     return (
         <motion.div
             role={decorative ? undefined : "group"}
             aria-roledescription={decorative ? undefined : "slide"}
             aria-hidden={decorative || undefined}
-            onPointerEnter={() => onHoverChange(true)}
-            onPointerLeave={() => onHoverChange(false)}
-            onMouseEnter={() => {
-                if (item.src && (item.src.endsWith('.mp4') || item.src.endsWith('.webm') || item.src.endsWith('.mov'))) {
-                    setFullscreenVideo(item.src);
-                }
+            onPointerEnter={() => {
+                onHoverChange(true);
+                setIsHovered(true);
             }}
-            onMouseLeave={() => {
-                // Fullscreen will close on mouse leave from overlay
+            onPointerLeave={() => {
+                onHoverChange(false);
+                setIsHovered(false);
+            }}
+            onClick={() => {
+                if (isVideo) onPreview();
             }}
             style={{
                 x,
                 y,
                 scale,
-                zIndex,
+                zIndex: isHovered ? 9999 : baseZIndex,
                 width,
                 height,
                 left: `${centerXRatio * 100}%`,
@@ -375,30 +443,31 @@ function WheelCard({
                 marginLeft: -width / 2,
                 marginTop: -height / 2,
             }}
-            className={`absolute overflow-hidden shadow-xl rounded-lg ${item.src && (item.src.endsWith('.mp4') || item.src.endsWith('.webm') || item.src.endsWith('.mov'))
-                ? 'cursor-pointer hover:shadow-2xl transition-shadow'
-                : ''
-                }`}
+            className={cn(
+                "absolute overflow-hidden rounded-2xl shadow-xl transition-all duration-300 select-none",
+                isVideo && "cursor-pointer",
+                isHovered && "!z-[9999] ring-2 ring-orange-500/80 shadow-[0_0_35px_rgba(255,84,30,0.4)]",
+            )}
         >
-            {item.src ? (
-                item.src.endsWith('.mp4') || item.src.endsWith('.webm') || item.src.endsWith('.mov') ? (
-                    <video
-                        src={item.src}
-                        draggable={false}
-                        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                    />
-                ) : (
-                    <img
-                        src={item.src}
-                        alt={decorative ? "" : (item.alt ?? "")}
-                        draggable={false}
-                        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-                    />
-                )
+            {item.src && /\.(mp4|webm|mov)(\?.*)?$/i.test(item.src) ? (
+                <video
+                    src={item.src}
+                    aria-label={decorative ? undefined : (item.alt ?? "")}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    draggable={false}
+                    className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+                />
+            ) : item.src ? (
+                <img
+                    src={item.src}
+                    alt={decorative ? "" : (item.alt ?? "")}
+                    draggable={false}
+                    className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+                />
             ) : (
                 <div
                     className="flex h-full w-full flex-col items-center justify-center gap-1 bg-card p-3 text-center text-card-foreground"
@@ -419,8 +488,57 @@ function WheelCard({
                     ) : null}
                 </div>
             )}
+
+            {isVideo ? (
+                <div
+                    className={cn(
+                        "absolute inset-0 flex flex-col justify-between p-3.5 sm:p-4 bg-gradient-to-t from-black/90 via-black/45 to-black/35 opacity-0 transition-opacity duration-200 pointer-events-none",
+                        isHovered && "opacity-100 pointer-events-auto",
+                    )}
+                >
+                    {/* Top context badges */}
+                    <div className="flex w-full items-center justify-between gap-1">
+                        <span className="rounded-full bg-black/70 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-orange-400 backdrop-blur-md border border-white/10 truncate">
+                            {item.category ?? "Selected Reel"}
+                        </span>
+                        {item.tool ? (
+                            <span className="rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-medium text-white/90 backdrop-blur-md truncate">
+                                {item.tool}
+                            </span>
+                        ) : null}
+                    </div>
+
+                    {/* Center action button with clear context and icon */}
+                    <div className="flex w-full items-center justify-center my-auto py-2">
+                        <button
+                            type="button"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onPreview();
+                            }}
+                            className="group/btn flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-2xl transition-all duration-200 hover:scale-105 hover:bg-neutral-100 active:scale-95"
+                            style={{ color: "#000000" }}
+                        >
+                            <svg
+                                className="h-3 w-3 fill-black transition-transform group-hover/btn:scale-110"
+                                viewBox="0 0 24 24"
+                            >
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            <span style={{ color: "#000000" }}>Watch Reel</span>
+                        </button>
+                    </div>
+
+                    {/* Bottom project context */}
+                    <div className="w-full text-left">
+                        <p className="text-xs font-bold leading-tight text-white line-clamp-2 drop-shadow-md">
+                            {item.title ?? (item.alt ? item.alt.replace(" — selected work reel", "") : "Project Reel")}
+                        </p>
+                    </div>
+                </div>
+            ) : null}
         </motion.div>
     );
 }
-
-export default HaloReel;
+export default HaloReel;
