@@ -356,7 +356,7 @@ body {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
   gap: 64px;
-  align-items: center;
+  align-items: start;
 }
 
 .about-inner {
@@ -496,6 +496,9 @@ body {
   color: #b4b9c8;
   max-width: 560px;
   margin-bottom: 48px;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
 }
 
 .about-tools {
@@ -569,6 +572,16 @@ body {
   max-width: 720px;
 }
 
+.contact-wrapper {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  align-items: center;
+  gap: 64px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
 .contact-heading {
   font-size: clamp(40px, 6vw, 84px);
   font-weight: 900;
@@ -639,7 +652,157 @@ body {
 
 .contact-socials {
   display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+
+.social-icon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.social-icon-link svg {
+  flex-shrink: 0;
+  color: #8f94a6;
+  transition: color 0.25s ease;
+}
+
+.social-icon-link:hover {
+  color: var(--accent-orange);
+  transform: translateY(-2px);
+}
+
+.social-icon-link:hover svg {
+  color: var(--accent-orange);
+}
+
+.contact-phone {
+  color: #ffffff;
+  transition: color 0.25s ease;
+}
+
+.contact-phone:hover {
+  color: var(--accent-orange);
+}
+
+/* Right side — availability card */
+.contact-right {
+  display: flex;
+  justify-content: center;
+}
+
+.availability-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--bg-page);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 32px;
+}
+
+.availability-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background: rgba(255, 84, 30, 0.12);
+  margin-bottom: 28px;
+}
+
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(74, 222, 128, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+.badge-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent-orange);
+}
+
+.availability-details {
+  display: flex;
   gap: 32px;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-item h4 {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8f94a6;
+  margin-bottom: 8px;
+}
+
+.detail-item p {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.services-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8f94a6;
+  margin-bottom: 14px;
+}
+
+.services-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.services-list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.services-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-orange);
 }
 
 /* ============================================================
@@ -1133,6 +1296,19 @@ body {
   .about-media {
     max-width: 100%;
   }
+
+  .contact-wrapper {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .contact-right {
+    justify-content: flex-start;
+  }
+
+  .availability-card {
+    max-width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1179,5 +1355,13 @@ body {
 
   .contact-socials {
     gap: 20px;
+  }
+
+  .availability-details {
+    gap: 20px;
+  }
+
+  .services-list {
+    grid-template-columns: 1fr;
   }
 }
