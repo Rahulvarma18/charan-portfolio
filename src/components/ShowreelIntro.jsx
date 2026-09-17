@@ -20,7 +20,6 @@ export default function ShowreelIntro({ onSkip }) {
         </article>
 
         <article className="reel-page reel-page--statement">
-          <small>Charan / 2023—26</small>
           <strong>
             [ Every frame
             <br />
@@ -45,17 +44,15 @@ export default function ShowreelIntro({ onSkip }) {
             <ReelVideo src={reelClips[1]} alt="" />
           </div>
           <strong>Charan</strong>
-          <p>
-            edit&nbsp;&nbsp;&nbsp;&nbsp; motion&nbsp;&nbsp;&nbsp;&nbsp; SaaS
-            <br />
-            design
-          </p>
         </article>
 
         <article className="reel-page reel-page--index">
           <ReelVideo src={reelClips[0]} alt="" />
           <p>
-            [ A <span>Motion</span> Reel ]
+            <span>After Effects</span>
+            <span>DaVinci</span>
+            <span>SaaS</span>
+            <span>Premier Pro</span>
           </p>
           <div>
             {reelClips.map((clip, index) => (

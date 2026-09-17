@@ -18,6 +18,22 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    // Prevent scrolling while showreel intro is showing
+    if (showIntro) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [showIntro]);
+
   return (
     <main className={`app-stage ${loaded ? "is-loaded" : ""}`}>
       {showIntro && <ShowreelIntro onSkip={() => setShowIntro(false)} />}

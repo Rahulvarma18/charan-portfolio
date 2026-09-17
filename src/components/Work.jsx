@@ -1,9 +1,17 @@
+import { motion } from "framer-motion";
 import { HaloReel } from "@/components/ui/halo-reel";
 import { workItems } from "@/data/media";
+import { fadeIn, defaultViewport } from "@/lib/motion";
 
 export default function Work() {
   return (
-    <section id="work">
+    <motion.section
+      id="work"
+      variants={fadeIn}
+      initial="hidden"
+      whileInView="visible"
+      viewport={defaultViewport}
+    >
       <HaloReel
         items={workItems}
         aria-label="Selected work"
@@ -20,6 +28,6 @@ export default function Work() {
         stepDuration={700}
         className="h-[100dvh] bg-background"
       />
-    </section>
+    </motion.section>
   );
 }
